@@ -1,0 +1,27 @@
+{
+  "name": "com.shmqc.webui2unityui",
+  "version": "1.0.0",
+  "displayName": "WebUI2UnityUI",
+  "description": "把AI生成的Web网页原型一键转成Unity UGUI并自动完成命名和结构，极速搭建UI",
+  "unity": "2019.4",
+  "documentationUrl": "https://github.com/boostcat/WebUI2UnityUI#readme",
+  "licensesUrl": "https://github.com/boostcat/WebUI2UnityUI/blob/main/LICENSE.md",
+  "author": {
+    "name": "shmqc"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ui",
+    "ugui",
+    "html",
+    "ai",
+    "editor",
+    "tool",
+    "workflow",
+    "textmeshpro"
+  ],
+  "dependencies": {
+    "com.unity.ugui": "1.0.0",
+    "com.unity.textmeshpro": "2.0.1"
+  }
+}

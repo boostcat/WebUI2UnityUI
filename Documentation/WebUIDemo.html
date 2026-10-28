@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo · 曦光远征营地整备界面（UI 原型预览 / Unity 数据文件）</title>
+<!--
+  ============================================================
+  这是一个 Demo，仅用于「不用自己写、直接跑通管线」的测试。
+
+  [浏览器] 双击本文件 = 预览界面效果。
+  [Unity ] 菜单 Tools/WebUI转UnityUI工具 →「HTML 源码(内置烘焙)」粘贴/拖入本文件 = 直接生成 UGUI。
+
+  本文件采用「单文件双用」格式：同一个文件既给人看，也给 Unity 读。
+  Unity 只读取带 data-u-type / data-u-name 的节点，会自动忽略
+  <head>、<style>、<script> 这些预览外壳，因此二者互不干扰、永不失同步。
+
+  ⚠️ 本 Demo 的配色、文案、构图都不构成任何风格规范，只是随手做的一个例子（当前配色：科技亮蓝）。
+     真正的界面请让 AI 按需求自由设计，只要遵守 UI-DSL 的结构约定即可。
+
+  布局模型（约束堆叠 D2）：
+    data-u-layout="v" 纵向堆叠 / "h" 横向堆叠
+    data-u-pad 容器内边距    data-u-gap 子节点间距
+    子节点显式 width/height；省略时按 Unity 规则取默认值（纵向容器高 40，横向容器宽 100）
+
+  本 Demo 覆盖的控件：div / image / text / button / input / scroll / toggle / radio / slider / dropdown
+  节点命名：大驼峰无空格 PascalCase（直接作为 Unity 层级 GameObject 名）
+  ============================================================
+-->
+<style>
+    /* ── 预览外壳：只为浏览器服务，Unity 完全忽略 ───────────────── */
+    html, body { margin: 0; padding: 0; background: #06101c; }
+    body {
+        font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── 约束堆叠：与 Unity 端 BuildChild 求解规则一一对应 ───────── */
+    [data-u-type] { box-sizing: border-box; }
+    [data-u-layout="v"] { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; }
+    [data-u-layout="h"] { display: flex; flex-direction: row;    flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; }
+    /* 缺省尺寸与 Unity 一致：纵向容器子节点默认高 40，横向容器子节点默认宽 100 */
+    [data-u-layout="v"] > * { flex: 0 0 auto; height: 40px; }
+    [data-u-layout="h"] > * { flex: 0 0 auto; width: 100px; }
+
+    /* ── 控件外观：Unity 端由 UGUI 组件渲染，此处用 CSS 模拟 ────── */
+    text, image { display: block; }
+    /* 垂直居中与 Unity 端 TMP 的默认 Middle 对齐保持一致 */
+    [data-u-type="text"]     { display: flex; align-items: center; white-space: pre-wrap; line-height: 1.2; overflow: hidden; }
+    [data-u-type="image"]    { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.07) 0 8px, rgba(0,0,0,0) 8px 16px); }
+    [data-u-type="button"]   { display: block; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
+    [data-u-type="input"]    { display: block; border: 1px solid rgba(255,255,255,.18); padding: 0 12px; font-family: inherit; }
+    [data-u-type="dropdown"] { display: block; border: 1px solid rgba(255,255,255,.18); padding: 0 8px; font-family: inherit; }
+    [data-u-type="input"]::placeholder { color: rgba(255,255,255,.35); }
+
+    [data-u-type="toggle"]   { display: flex; align-items: center; }
+    [data-u-type="toggle"]::before {
+        content: ""; width: 1.05em; height: 1.05em; border-radius: 999px;
+        background: currentColor; margin-right: .5em; flex: 0 0 auto;
+    }
+    [data-u-type="toggle"][data-u-checked="false"]::before {
+        background: rgba(0,0,0,0); box-shadow: inset 0 0 0 2px currentColor;
+    }
+
+    [data-u-type="radio"]    { display: flex; align-items: center; }
+    [data-u-type="radio"]::before {
+        content: ""; width: .9em; height: .9em; border-radius: 999px;
+        box-shadow: inset 0 0 0 2px currentColor; margin-right: .5em; flex: 0 0 auto;
+    }
+    [data-u-type="radio"][data-u-checked="true"]::before { background: currentColor; }
+
+    [data-u-type="slider"]   { position: relative; border-radius: 999px; overflow: hidden; }
+    [data-u-type="slider"]::before {
+        content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+        width: var(--u-val, 50%); background: currentColor;
+    }
+    [data-u-type="slider"]::after {
+        content: ""; position: absolute; top: 0; bottom: 0; left: var(--u-val, 50%);
+        width: 4px; margin-left: -2px; background: #fff; opacity: .9;
+    }
+
+    [data-u-type="scroll"]   { position: relative; overflow: auto; border: 1px dashed rgba(255,255,255,.22); }
+    [data-u-type="scroll"]::before {
+        content: "滚动区域 ScrollView"; position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        color: rgba(255,255,255,.28); font-size: 20px;
+    }
+
+</style>
+</head>
+<body>
+
+<!-- ==================== 以下为 Unity 读取的内容（数据区） ==================== -->
+<div id="u-stage">
+
+<div data-u-type="div" data-u-name="DawnmarchCamp" data-u-layout="v" style="width: 1920px; height: 1080px; background-color: #10263f; color: #eaf6ff; font-family: sans-serif;">
+
+    <!-- 顶栏：横向堆叠 -->
+    <div data-u-type="div" data-u-name="TopBar" data-u-layout="h" data-u-pad="20" data-u-gap="20" style="height: 90px; background-color: #1a3c5e;">
+        <text data-u-type="text" data-u-name="TitleText" style="width: 420px; height: 50px; color: #3ad6ff; font-size: 34px; text-align: left; font-weight: bold;">曦光远征 · 营地</text>
+        <text data-u-type="text" data-u-name="TokenCountText" style="width: 260px; height: 40px; color: #eaf6ff; font-size: 22px; text-align: left;">晨曦之证：1,280</text>
+        <button data-u-type="button" data-u-name="SettingsButton" style="width: 150px; height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 20px;">设置</button>
+    </div>
+
+    <!-- 主区域：横向三栏 -->
+    <div data-u-type="div" data-u-name="MainArea" data-u-layout="h" data-u-pad="30" data-u-gap="30" style="height: 990px; background-color: #10263f;">
+
+        <!-- 左栏：英雄信息（纵向堆叠） -->
+        <div data-u-type="div" data-u-name="LeftPanel" data-u-layout="v" data-u-pad="24" data-u-gap="16" style="width: 560px; background-color: #1a3c5e;">
+            <image data-u-type="image" data-u-name="HeroPortrait" style="width: 150px; height: 150px; background-color: #24496f;" />
+            <text data-u-type="text" data-u-name="HeroNameText" style="height: 40px; color: #eaf6ff; font-size: 28px; text-align: left;">破晓行者 · 凯尔</text>
+            <text data-u-type="text" data-u-name="ClassLabel" style="height: 28px; color: #8fc4ec; font-size: 20px; text-align: left;">职业</text>
+            <select data-u-type="dropdown" data-u-name="ClassDropdown" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px;">
+                <option>曦光骑士</option>
+                <option>晨曦法师</option>
+                <option>破晓游侠</option>
+            </select>
+            <text data-u-type="text" data-u-name="StatsTitle" style="height: 28px; color: #8fc4ec; font-size: 20px; text-align: left;">属性</text>
+            <text data-u-type="text" data-u-name="StatsText" style="height: 120px; color: #eaf6ff; font-size: 22px; text-align: left;">生命 240 / 240
+体力 80 / 80
+攻击 56　防御 34</text>
+
+            <!-- 单选框组：同一 div 容器内的 radio 自动互斥 -->
+            <text data-u-type="text" data-u-name="FormationLabel" style="height: 28px; color: #8fc4ec; font-size: 20px; text-align: left;">阵型</text>
+            <div data-u-type="div" data-u-name="FormationGroup" data-u-layout="v" data-u-gap="8" style="height: 136px; background-color: rgba(0,0,0,0);">
+                <div data-u-type="radio" data-u-name="FormationBalanceRadio" data-u-checked="true" style="height: 40px; color: #eaf6ff; font-size: 22px;">均衡推进</div>
+                <div data-u-type="radio" data-u-name="FormationGuardRadio" data-u-checked="false" style="height: 40px; color: #eaf6ff; font-size: 22px;">铁壁坚守</div>
+                <div data-u-type="radio" data-u-name="FormationRushRadio" data-u-checked="false" style="height: 40px; color: #eaf6ff; font-size: 22px;">疾风突袭</div>
+            </div>
+
+            <text data-u-type="text" data-u-name="TitleInputLabel" style="height: 28px; color: #8fc4ec; font-size: 20px; text-align: left;">自定义称号</text>
+            <input data-u-type="input" data-u-name="TitleInput" placeholder="输入称号（最多 8 字）" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px; text-align: left;" />
+            <button data-u-type="button" data-u-name="RestButton" style="width: 200px; height: 50px; background-color: #3ad6ff; color: #04121f; font-size: 22px;">休整 (Rest)</button>
+        </div>
+
+        <!-- 中栏：背包（纵向堆叠） -->
+        <div data-u-type="div" data-u-name="CenterPanel" data-u-layout="v" data-u-pad="24" data-u-gap="16" style="width: 620px; background-color: #1a3c5e;">
+            <text data-u-type="text" data-u-name="InventoryTitle" style="height: 32px; color: #3ad6ff; font-size: 26px; text-align: left;">背包</text>
+            <text data-u-type="text" data-u-name="SearchLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">物品搜索</text>
+            <input data-u-type="input" data-u-name="SearchInput" placeholder="输入物品名称" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px; text-align: left;" />
+            <div data-u-type="scroll" data-u-name="InventoryScroll" data-u-dir="v" style="height: 340px; background-color: #0d2034;"></div>
+            <text data-u-type="text" data-u-name="CountLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">使用数量</text>
+            <input data-u-type="input" data-u-name="CountInput" placeholder="输入数量" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px; text-align: left;" />
+            <text data-u-type="text" data-u-name="RemarkLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">备注</text>
+            <input data-u-type="input" data-u-name="RemarkInput" placeholder="输入备注（选填）" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px; text-align: left;" />
+            <button data-u-type="button" data-u-name="CraftButton" style="width: 300px; height: 56px; background-color: #3ad6ff; color: #04121f; font-size: 24px;">锻造 (Craft)</button>
+        </div>
+
+        <!-- 右栏：选项（纵向堆叠） -->
+        <div data-u-type="div" data-u-name="RightPanel" data-u-layout="v" data-u-pad="24" data-u-gap="16" style="width: 620px; background-color: #1a3c5e;">
+            <text data-u-type="text" data-u-name="OptionsTitle" style="height: 32px; color: #3ad6ff; font-size: 26px; text-align: left;">出战选项</text>
+            <div data-u-type="toggle" data-u-name="AutoPickToggle" data-u-checked="true" style="height: 44px; color: #eaf6ff; font-size: 22px;">自动拾取战利品</div>
+            <div data-u-type="toggle" data-u-name="ShowDamageToggle" data-u-checked="false" style="height: 44px; color: #eaf6ff; font-size: 22px;">显示伤害数字</div>
+            <text data-u-type="text" data-u-name="SfxVolumeLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">音效音量</text>
+            <div data-u-type="slider" data-u-name="SfxVolumeSlider" data-u-value="0.7" style="height: 30px; background-color: #24496f; color: #3ad6ff;"></div>
+            <text data-u-type="text" data-u-name="SortLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">物品排序</text>
+            <select data-u-type="dropdown" data-u-name="SortDropdown" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px;">
+                <option>按稀有度</option>
+                <option>按类型</option>
+                <option>按名称</option>
+            </select>
+
+            <!-- 单选框组：出战模式 -->
+            <text data-u-type="text" data-u-name="ModeLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">出战模式</text>
+            <div data-u-type="div" data-u-name="ModeGroup" data-u-layout="v" data-u-gap="8" style="height: 136px; background-color: rgba(0,0,0,0);">
+                <div data-u-type="radio" data-u-name="ModeSoloRadio" data-u-checked="false" style="height: 40px; color: #eaf6ff; font-size: 22px;">单人独行</div>
+                <div data-u-type="radio" data-u-name="ModeDuoRadio" data-u-checked="true" style="height: 40px; color: #eaf6ff; font-size: 22px;">双人小队</div>
+                <div data-u-type="radio" data-u-name="ModeSquadRadio" data-u-checked="false" style="height: 40px; color: #eaf6ff; font-size: 22px;">四人远征</div>
+            </div>
+
+            <text data-u-type="text" data-u-name="DifficultyLabel" style="height: 26px; color: #8fc4ec; font-size: 20px; text-align: left;">难度</text>
+            <select data-u-type="dropdown" data-u-name="DifficultyDropdown" style="height: 50px; background-color: #24496f; color: #eaf6ff; font-size: 22px;">
+                <option>旅人 (易)</option>
+                <option>先锋 (中)</option>
+                <option>传说 (难)</option>
+            </select>
+            <button data-u-type="button" data-u-name="EmbarkButton" style="width: 280px; height: 60px; background-color: #3ad6ff; color: #04121f; font-size: 26px;">启程远征 (Embark)</button>
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+<!-- ==================== 以上为 Unity 读取的内容（数据区） ==================== -->
+
+<script>
+(function () {
+    var stage = document.getElementById('u-stage');
+
+    // data-u-gap / data-u-pad 在 Unity 端由 C# 求解，在浏览器端翻译成真正的 CSS
+    var boxes = stage.querySelectorAll('[data-u-gap],[data-u-pad]');
+    for (var i = 0; i !== boxes.length; i++) {
+        var g = boxes[i].getAttribute('data-u-gap');
+        var p = boxes[i].getAttribute('data-u-pad');
+        if (g) boxes[i].style.gap = g + 'px';
+        if (p) boxes[i].style.padding = p + 'px';
+    }
+
+    // 文本节点去首尾空白，与 Unity 端 Trim 行为一致
+    var texts = stage.querySelectorAll('[data-u-type="text"]');
+    for (var j = 0; j !== texts.length; j++) {
+        texts[j].textContent = texts[j].textContent.replace(/^[\s\uFEFF]+|[\s\uFEFF]+$/g, '');
+    }
+
+    // 滑动条进度
+    var sliders = stage.querySelectorAll('[data-u-type="slider"]');
+    for (var k = 0; k !== sliders.length; k++) {
+        var v = parseFloat(sliders[k].getAttribute('data-u-value'));
+        if (isNaN(v)) v = 0.5;
+        if (v > 1) v = v / 100;
+        v = Math.max(0, Math.min(1, v));
+        sliders[k].style.setProperty('--u-val', (v * 100) + '%');
+    }
+
+})();
+</script>
+
+</body>
+</html>
